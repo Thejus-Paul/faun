@@ -1,0 +1,19 @@
+{
+  "name": "Faun",
+  "short_name": "faun",
+  "description": "A chrome extension to help with troubleshooting",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "desktopCapture",
+    "unlimitedStorage"
+  ],
+  "offline_enabled": true,
+  "action": {
+    "default_title": "Faun",
+    "default_popup": "popup/index.html"
+  }
+}

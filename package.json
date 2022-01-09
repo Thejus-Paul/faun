@@ -1,0 +1,22 @@
+{
+  "name": "faun",
+  "version": "1.0.0",
+  "description": "A chrome extension to help with troubleshooting",
+  "repository": "git@github.com:Thejus-Paul/faun.git",
+  "author": "Thejus Paul <thejuspaul@pm.me>",
+  "scripts": {
+    "format": "npx prettier --write .",
+    "lint": "npx standard --fix"
+  },
+  "standard": {
+    "globals": [
+      "chrome",
+      "MediaRecorder",
+      "Blob"
+    ]
+  },
+  "devDependencies": {
+    "standard": "latest",
+    "prettier": "latest"
+  }
+}
