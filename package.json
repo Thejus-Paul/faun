@@ -11,6 +11,7 @@
   "standard": {
     "globals": [
       "chrome",
+      "MediaStream",
       "MediaRecorder",
       "Blob"
     ]
