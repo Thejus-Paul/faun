@@ -1,61 +1,90 @@
 const recorderElement = document.getElementById('record')
+let recorder = null
 
 recorderElement.addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
 
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
-    function: recorder
+    function: recordScreenAndAudio
   })
 })
 
-async function recorder () {
-  const configuration = { audio: false, video: { width: 1280, height: 720 } }
-  const stream = await navigator.mediaDevices.getDisplayMedia(configuration)
-  const audio = await navigator.mediaDevices.getUserMedia({
-    audio: true,
+async function recordScreenAndAudio () {
+  async function captureMediaDevices (
+    mediaConstraints = {
+      video: {
+        width: 1280,
+        height: 720
+      },
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 44100
+      }
+    }
+  ) {
+    const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints)
+
+    return stream
+  }
+
+  async function captureScreen (
+    mediaConstraints = {
+      video: {
+        cursor: 'always',
+        resizeMode: 'crop-and-scale'
+      }
+    }
+  ) {
+    const screenStream = await navigator.mediaDevices.getDisplayMedia(
+      mediaConstraints
+    )
+
+    return screenStream
+  }
+
+  const screenStream = await captureScreen()
+  const audioStream = await captureMediaDevices({
+    audio: {
+      echoCancellation: true,
+      noiseSuppression: true,
+      sampleRate: 44100
+    },
     video: false
   })
 
-  // needed for better browser support
-  const mime = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
-    ? 'video/webm; codecs=vp9'
-    : 'video/webm'
+  const stream = new MediaStream([
+    ...screenStream.getTracks(),
+    ...audioStream.getTracks()
+  ])
 
-  const mediaRecorder = new MediaRecorder(stream, { mimeType: mime })
-  const audioRecorder = new MediaRecorder(audio, { mimeType: 'audio/webm' })
+  recorder = new MediaRecorder(stream)
+  let chunks = []
 
-  const frames = []
-  mediaRecorder.addEventListener('dataavailable', ({ data }) =>
-    frames.push(data)
-  )
+  recorder.ondataavailable = (event) => {
+    if (event.data.size > 0) {
+      chunks.push(event.data)
+    }
+  }
 
-  const tracks = []
-  audioRecorder.addEventListener('dataavailable', ({ data }) =>
-    tracks.push(data)
-  )
+  recorder.onstop = () => {
+    const blob = new Blob(chunks, {
+      type: 'video/webm'
+    })
 
-  mediaRecorder.addEventListener('stop', () => {
-    audioRecorder.stop()
-    const blob = new Blob(frames, { type: frames[0].type })
-    const url = URL.createObjectURL(blob)
+    chunks = []
+    const blobUrl = URL.createObjectURL(blob)
 
     const a = document.createElement('a')
-    a.href = url
+    a.href = blobUrl
     a.download = 'video.webm'
     a.click()
-  })
+  }
 
-  audioRecorder.addEventListener('stop', () => {
-    const blob = new Blob(tracks, { type: tracks[0].type })
-    const url = URL.createObjectURL(blob)
+  recorder.start(200)
 
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'audio.wav'
-    a.click()
-  })
-
-  mediaRecorder.start()
-  audioRecorder.start()
+  window.setTimeout(() => {
+    recorder.stream.getTracks().forEach((track) => track.stop())
+  }, 5000)
 }
